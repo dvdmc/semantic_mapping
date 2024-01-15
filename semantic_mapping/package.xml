@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>semantic_mapping</name>
+  <version>0.0.1</version>
+  <description>General tools for semantic mapping</description>
+  <maintainer email="davidmc@unizar.es">David Morilla-Cabello</maintainer>
+
+  <license>BSD</license>
+
+  <url type="repository">https://github.com/dvdmc/semantic_mapping</url>
+
+  <author email="davidmc@unizar.es">David Morilla-Cabello</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+</package>

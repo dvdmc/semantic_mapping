@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>semantic_mapping_ros</name>
+  <version>0.0.1</version>
+  <description>Semantic mapping implementation for ROS</description>
+  <maintainer email="davidmc@unizar.es">David Morilla-Cabello</maintainer>
+
+  <license>BSD</license>
+
+  <url type="repository">https://github.com/dvdmc/semantic_mapping</url>
+
+  <author email="davidmc@unizar.es">David Morilla-Cabello</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
+  <depend>cv_bridge</depend>
+  <depend>tf_conversions</depend>
+  <depend>semantic_mapping</depend>
+
+</package>

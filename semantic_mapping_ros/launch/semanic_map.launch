@@ -1,0 +1,16 @@
+<launch>
+
+    <arg name="experiment_save_path" default="not_defined"/>
+
+    <!-- Publish stati transform from cam0_odom to map as the identity-->
+    <node pkg="tf" type="static_transform_publisher" name="cam0_odom_to_map" args="0 0 0 0 0 0 1 map cam0_odom 100" />
+    
+    <node pkg="semantic_mapping_ros" type="voxel_map" name="voxel_map" output="screen">
+        <param name="experiment_save_path" value="$(arg experiment_save_path)"/>
+
+        <rosparam command="load" file="$(find semantic_mapping_ros)/cfg/voxel_map.yaml" />
+
+        <remap from="sensor/point_cloud" to="cam0/point_cloud"/>
+    </node>
+
+</launch>
