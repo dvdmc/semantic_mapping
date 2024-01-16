@@ -29,7 +29,6 @@ class VoxelIntegrator {
     FusionMethod fusion_method_;
     UncertaintyType uncertainty_type_;
     float beta_;
-    Eigen::ArrayXf adaptive_beta_;
 
    public:
     VoxelIntegrator(int num_classes, FusionMethod fusion_method,
@@ -38,10 +37,6 @@ class VoxelIntegrator {
           fusion_method_(fusion_method),
           uncertainty_type_(uncertainty_type),
           beta_(beta) {
-        adaptive_beta_.resize(num_classes_, 1);
-        if (num_classes_ == 8) {
-            adaptive_beta_ << 0.75, 0.5, 0.7, 0.7, 0.7, 0.4, 0.6, 0.5;
-        }
     }
     ~VoxelIntegrator(){};
 
@@ -74,14 +69,8 @@ class VoxelIntegrator {
             Eigen::ArrayXf::Ones(current.getNumClasses(), 1) /
             current.getNumClasses();
         Eigen::ArrayXf input_probabilities = input.getProbabilities();
-        if (beta_ == 1.0) {
-            float used_beta = adaptive_beta_(input.getMostProbableClass());
-            input_probabilities = (1 - used_beta) * input.getProbabilities() +
-                                  (used_beta)*uniform;
-        } else {
-            input_probabilities =
-                (1 - beta_) * input.getProbabilities() + (beta_)*uniform;
-        }
+        input_probabilities =
+            (1 - beta_) * input.getProbabilities() + (beta_)*uniform;
         Eigen::ArrayXf product =
             (current.getProbabilities() * input_probabilities);
         output.setProbabilities((product / product.sum()).matrix());
@@ -115,17 +104,9 @@ class VoxelIntegrator {
         Eigen::ArrayXf input_class_ps_weighted;
         Eigen::ArrayXf uniform =
             Eigen::ArrayXf::Ones(num_classes_, 1) / float(num_classes_);
-        if (beta_ == 1) {
-            float used_beta = adaptive_beta_(input.getMostProbableClass());
-            input_class_ps_weighted =
-                ((1 - used_beta) * input.getProbabilities() +
-                 used_beta * uniform)
-                    .pow(input_alpha / max_alpha);
-        } else {
-            input_class_ps_weighted =
-                ((1 - beta_) * input.getProbabilities() + beta_ * uniform)
-                    .pow(input_alpha / max_alpha);
-        }
+        input_class_ps_weighted =
+            ((1 - beta_) * input.getProbabilities() + beta_ * uniform)
+                .pow(input_alpha / max_alpha);
 
         // Normalization constants for each class to get a probability
         // distribution
@@ -197,6 +178,7 @@ class VoxelIntegrator {
         output.setProbabilities(probabilities);
     }
 
+    // TODO: This should  be assigned in the constructor and only checked once
     VoxelInfo fuseVoxel(const VoxelInfo &current, const VoxelInfo &input) {
         VoxelInfo output(num_classes_);
         if (fusion_method_ == FusionMethod::KF) {

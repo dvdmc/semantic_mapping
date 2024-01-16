@@ -216,13 +216,6 @@ void VoxelHashMapNode::pcdCallback(
     last_update_time_ = msg->header.stamp;
     Eigen::Vector3f cam_pos = T_Map_Cam.translation();
 
-    // Intermediate hash map to store the new measurements
-    std::shared_ptr<VoxelHashMap> measurement_voxel_hash_map =
-        std::make_shared<VoxelHashMap>(p_resolution_, p_n_classes_);
-
-    // Assign integrator to voxel hash map
-    voxel_hash_map_->setIntegrator(voxel_integrator_);
-
     ROS_INFO("Received point cloud with %d points", msg->width * msg->height);
     // Loop all iterators
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_rgba,
@@ -457,7 +450,11 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         }
         std_msgs::ColorRGBA color;
         std::vector<uint8_t> rgb;
-
+        if(point.x > -3 && point.x < -2 && point.y < -1.5 && point.y > -2) {
+            ROS_INFO("Voxel: %f %f %f", point.x, point.y, point.z);
+            ROS_INFO("Voxel probs: ");
+            std::cout << it->second.getProbabilities() << std::endl;
+        }
         int voxel_class;
         float class_probability;
         it->second.getMostProbClassAndProb(voxel_class, class_probability);
