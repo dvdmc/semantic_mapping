@@ -124,6 +124,14 @@ void VoxelHashMapNode::rosInit() {
     p_fusion_method_ = fusion_method_map[fusion_method];
     p_uncertainty_method_ = uncertainty_method_map[uncertainty_method];
 
+    if (p_dl_method_ == DlMethod::MCD) {
+        // If we are using MCD we need to sample from the network
+        if (!nh_private_.getParam("n_samples_mc", p_n_samples_mc_)) {
+            ROS_WARN("n_samples_mc not set, using default: 10");
+            p_n_samples_mc_ = 10;
+        }
+    }
+
     n_updates_since_last_save_ = 0;
     seq_number_ = 0;
     // Print config
@@ -134,16 +142,16 @@ void VoxelHashMapNode::rosInit() {
     ROS_INFO("map_frame: %s", map_frame_.c_str());
 
     // Subscribers
-    sub_pcd_ = nh_.subscribe("point_cloud", 1,
-                             &VoxelHashMapNode::pcdCallback, this);
+    sub_pcd_ =
+        nh_.subscribe("point_cloud", 1, &VoxelHashMapNode::pcdCallback, this);
 
     // Publishers
     if (p_visualize_semantics_) {
         pub_voxel_markers_ =
             nh_.advertise<visualization_msgs::MarkerArray>("voxel_markers", 1);
         pub_background_markers_ =
-            nh_.advertise<visualization_msgs::MarkerArray>(
-                "background_markers", 1);
+            nh_.advertise<visualization_msgs::MarkerArray>("background_markers",
+                                                           1);
 
         // Timer to publish voxel markers
         vis_timer_ =
@@ -460,7 +468,7 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         }
         std_msgs::ColorRGBA color;
         std::vector<uint8_t> rgb;
-        if(point.x > -3 && point.x < -2 && point.y < -1.5 && point.y > -2) {
+        if (point.x > -3 && point.x < -2 && point.y < -1.5 && point.y > -2) {
             ROS_INFO("Voxel: %f %f %f", point.x, point.y, point.z);
             ROS_INFO("Voxel probs: ");
             std::cout << it->second.getProbabilities() << std::endl;

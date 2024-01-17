@@ -1,9 +1,9 @@
 depth_threshold: 7
-resolution: 0.1
+resolution: 0.5
 
-n_classes: 21
-dl_method: "DET"
-fusion_method: "BAY"
+n_classes: 8
+dl_method: "MCD"
+fusion_method: "W_BAY"
 uncertainty_method: "UNCERTAINTY"
 beta: 0.3
 
