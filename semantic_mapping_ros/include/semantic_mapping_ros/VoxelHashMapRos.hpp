@@ -13,6 +13,7 @@
 #include <semantic_mapping_ros/FilePath.h>
 
 namespace semantic_mapping {
+
 // Define ENUM with the DL method
 enum class DlMethod {
     MCD,  // The node expects a point cloud with _num_mc_samples_ probability
@@ -51,6 +52,7 @@ class VoxelHashMapNode {
 
     // Services
     ros::ServiceServer srv_save_map_;
+    ros::ServiceServer srv_save_map_request_;
     ros::ServiceServer srv_open_map_;
     ros::ServiceServer srv_evaluate_map_;
     ros::ServiceClient srv_client_sensor_;
@@ -82,7 +84,7 @@ class VoxelHashMapNode {
     // Visualization
     bool p_visualize_semantics_;
     double p_vis_sem_freq_;
-    std::vector<std::vector<uint8_t>> label_to_rgb_; 
+    std::vector<std::vector<uint8_t>> label_to_rgb_;
     // Initialized from semantic utils from the number of classes.
 
     // Experiment parameters
@@ -110,7 +112,9 @@ class VoxelHashMapNode {
     void pcdCallback(sensor_msgs::PointCloud2ConstPtr const &msg);
 
     // Services
-
+    bool saveMapRequestSrvCallback(
+        std_srvs::Empty::Request &req,
+        std_srvs::Empty::Response &res);
     bool saveMapSrvCallback(semantic_mapping_ros::FilePath::Request &req,
                             semantic_mapping_ros::FilePath::Response &res);
     bool openMapSrvCallback(semantic_mapping_ros::FilePath::Request &req,

@@ -10,7 +10,11 @@
 
         <rosparam command="load" file="$(find semantic_mapping_ros)/cfg/voxel_map.yaml" />
 
-        <remap from="sensor/point_cloud" to="cam0/point_cloud"/>
+        <remap from="point_cloud" to="cam0/point_cloud"/>
     </node>
 
+    <node pkg="sensors_tools_ros" type="semantic_node.py" name="semantic_sensor" output="screen">
+        <rosparam command="load" file="$(find sensors_tools_ros)/cfg/sensor.yaml" />
+    </node>
+    
 </launch>

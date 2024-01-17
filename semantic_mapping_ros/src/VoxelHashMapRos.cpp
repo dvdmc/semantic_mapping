@@ -126,6 +126,12 @@ void VoxelHashMapNode::rosInit() {
 
     n_updates_since_last_save_ = 0;
     seq_number_ = 0;
+    // Print config
+    ROS_INFO("dl_method: %s", dl_method.c_str());
+    ROS_INFO("fusion_method: %s", fusion_method.c_str());
+    ROS_INFO("uncertainty_method: %s", uncertainty_method.c_str());
+    ROS_INFO("beta: %f", p_beta_);
+    ROS_INFO("map_frame: %s", map_frame_.c_str());
 
     // Subscribers
     sub_pcd_ = nh_.subscribe("point_cloud", 1,
@@ -154,6 +160,10 @@ void VoxelHashMapNode::rosInit() {
     }
 
     // Services
+    srv_save_map_request_ = nh_.advertiseService(
+        "save_map_request", &VoxelHashMapNode::saveMapRequestSrvCallback, this);
+    // The difference between these two is that the first one does not specify
+    // the path and instead requests the saveVoxelMap() function to be called.
     srv_save_map_ = nh_.advertiseService(
         "save_map", &VoxelHashMapNode::saveMapSrvCallback, this);
     srv_open_map_ = nh_.advertiseService(
@@ -339,7 +349,7 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
     }
     // Check if there are voxels to publish
     if (voxel_hash_map_->size() == 0) {
-        ROS_INFO("No voxels to publish");
+        // ROS_INFO("No voxels to publish");
         return;
     }
     // Time this function
@@ -525,6 +535,12 @@ bool VoxelHashMapNode::saveVoxelMap() {
        << ".semantic";
     voxel_hash_map_->serializeVoxelHashMap(ss.str());
 
+    return true;
+}
+
+bool VoxelHashMapNode::saveMapRequestSrvCallback(
+    std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) {
+    saveVoxelMap();
     return true;
 }
 
