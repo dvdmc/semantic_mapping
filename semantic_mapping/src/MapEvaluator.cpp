@@ -12,9 +12,9 @@ int main(int argc, char** argv)
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help", "produce help message")
-        ("num_classes", po::value<int>(), "the number of classes in the map required for deserialization")
-        ("resolution", po::value<double>(), "the resolution of the map required for deserialization")
-        ("exp_path", po::value<std::string>(), "the path to the experiment folder")
+        ("num_classes", po::value<int>()->required(), "the number of classes in the map required for deserialization")
+        ("resolution", po::value<float>()->required(), "the resolution of the map required for deserialization")
+        ("exp_path", po::value<std::string>()->required(), "the path to the experiment folder")
     ;
 
     po::variables_map vm;
@@ -28,9 +28,9 @@ int main(int argc, char** argv)
 
     int num_classes;
     if (vm.count("num_classes")) {
-        std::cout << "Number of classes was set to " 
-                  << vm["num_classes"].as<int>() << ".\n";
         num_classes = vm["num_classes"].as<int>();
+        std::cout << "Number of classes was set to " 
+                  << num_classes << ".\n";
     } else {
         std::cout << "Number of classes was not set.\n";
         return 1;
@@ -38,17 +38,19 @@ int main(int argc, char** argv)
 
     float resolution;
     if (vm.count("resolution")) {
-        std::cout << "Resolution was set to " 
-                  << vm["resolution"].as<float>() << ".\n";
         resolution = vm["resolution"].as<float>();
+        std::cout << "Resolution was set to " 
+                  << resolution << ".\n";
     } else {
         std::cout << "Resolution was not set.\n";
         return 1;
     }
 
+    std::string experiment_folder;
     if (vm.count("exp_path")) {
+        experiment_folder = vm["exp_path"].as<std::string>();
         std::cout << "Experiment path was set to " 
-                  << vm["exp_path"].as<std::string>() << ".\n";
+                  << experiment_folder << ".\n";
     } else {
         std::cout << "Experiment path was not set.\n";
         return 1;
@@ -60,12 +62,11 @@ int main(int argc, char** argv)
     // 4. The maps in the sequence are evaluated saving the confusion matrix by the MapEvaluator class
     
     // Read the experiment folder
-    std::string experiment_folder = argv[1];
-
     semantic_mapping::MapEvaluator map_evaluator(resolution, num_classes);
-    if(resolution != map_evaluator.map.getResolution() || num_classes != map_evaluator.map.getNumClasses())
+    bool is_res_equal = map_evaluator.map.getResolution() == resolution;
+    bool is_num_classes_equal = map_evaluator.map.getNumClasses() == num_classes;
+    if(!is_res_equal || !is_num_classes_equal)
     {
-        std::cout << "The map resolution or number of classes does not match the specified" << std::endl;
         return 0;
     }
     map_evaluator.setExperimentFolder(experiment_folder);

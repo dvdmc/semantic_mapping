@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #include <geometry_msgs/Pose.h>
 #include <std_srvs/SetBool.h>
@@ -189,9 +190,12 @@ void VoxelHashMapNode::rosInit() {
                       "%F_%H-%M-%S", std::gmtime(&time));
         // The save path will be
         // *p_save_path*/*timestamp*_dl_method_fusion_method_uncertainty_method_beta/
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(2) << p_beta_;
+        std::string beta_str = stream.str();
         p_save_path_ = p_save_directory_path_ + std::string(timeString) + "_" +
                        dl_method + "_" + fusion_method + "_" +
-                       uncertainty_method + "_" + std::to_string(p_beta_) + "/";
+                       uncertainty_method + "_" + beta_str + "/";
         ROS_INFO("Save path: %s", p_save_path_.c_str());
         // Try to create the directory if it doesn't exist
         if (!fs::create_directories(p_save_path_)) {

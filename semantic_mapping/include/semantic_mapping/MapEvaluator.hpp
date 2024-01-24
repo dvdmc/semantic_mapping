@@ -21,14 +21,10 @@ class MapEvaluator {
     }
 
     void evaluateMap() {
-        // std::unordered_map<uint64_t, VoxelInfo> gt_map_hash_map =
-        // gt_map.getVoxelHashMap();
-        std::unordered_map<uint64_t, VoxelInfo> map_hash_map =
-            map.getVoxelHashMap();
-
         Eigen::MatrixXi confusion_matrix;
 
         std::cout << "Num classes: " << map.getNumClasses() << std::endl;
+        map.setVerbose(true);
         // Compute values that depend only on the current map
         map.evaluateVoxelMap(confusion_matrix);
 

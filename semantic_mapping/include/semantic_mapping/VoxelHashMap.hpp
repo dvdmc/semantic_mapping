@@ -24,7 +24,7 @@ class VoxelHashMap {
         : resolution_(_resolution),
           center_displacement_(_resolution / 2.0),
           n_classes_(_n_classes),
-          verbose_(true) {
+          verbose_(false) {
         integrator_ = std::make_unique<VoxelIntegrator>(
             n_classes_, FusionMethod::W_BAY, UncertaintyType::UNCERTAINTY, 0.3);
     }
@@ -202,6 +202,7 @@ class VoxelHashMap {
         std::vector<int> n_samples_per_class(n_classes_, 0);
         for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
              it++) {
+            // std::cout << "Class: " << it->second.getMostProbableClass() << " GT class: " << it->second.getGtClass() << std::endl;
             n_samples_per_class[it->second.getGtClass()]++;
             confusion_matrix(it->second.getGtClass(),
                              it->second.getMostProbableClass())++;
@@ -210,10 +211,8 @@ class VoxelHashMap {
             std::cout << "Number of voxels in map: " << voxel_hash_map_.size()
                       << std::endl;
             std::cout << "Confusion matrix: " << std::endl;
-            std::cout << "Back Bottle Chair Table Person Plant Sofa   TV"
-                      << std::endl;
-            Eigen::IOFormat CleanFmt(4, 0, "   ", "\n", "", "", "", "");
-            std::cout << confusion_matrix.format(CleanFmt) << std::endl;
+            // Eigen::IOFormat CleanFmt(4, 0, "   ", "\n", "", "", "", "");
+            // std::cout << confusion_matrix.format(CleanFmt) << std::endl;
             std::cout << "Number of samples per class: " << std::endl;
             for (int i = 0; i < n_classes_; i++) {
                 std::cout << n_samples_per_class[i] << " ";
