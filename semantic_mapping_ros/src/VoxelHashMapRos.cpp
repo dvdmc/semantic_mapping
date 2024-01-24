@@ -39,6 +39,7 @@ std::unordered_map<std::string, DlMethod> dl_method_map = {
 VoxelHashMapNode::VoxelHashMapNode(ros::NodeHandle &nh,
                                    ros::NodeHandle &nh_private)
     : nh_(nh), nh_private_(nh_private) {
+    did_voxel_map_update_ = false;
     rosInit();
     // Create voxel hash map
     voxel_hash_map_ =
@@ -284,7 +285,7 @@ void VoxelHashMapNode::pcdCallback(
     std::chrono::duration<double> elapsed = finish - start;
     ROS_INFO("Time to fuse map: %f", elapsed.count());
     ROS_INFO("Map size: %ld", voxel_hash_map_->size());
-
+    did_voxel_map_update_ = true;
     // Save map for evaluation
     if (p_save_experiment_ && voxel_hash_map_->size() > 0) {
         n_updates_since_last_save_++;
@@ -352,19 +353,10 @@ inline bool VoxelHashMapNode::tryGetTransform(const std::string &frame_id,
 }
 
 void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
-    if (!p_visualize_semantics_) {
+    if (!p_visualize_semantics_ || voxel_hash_map_->size() == 0 || !did_voxel_map_update_ ) {
         return;
     }
-    // Check if there are voxels to publish
-    if (voxel_hash_map_->size() == 0) {
-        // ROS_INFO("No voxels to publish");
-        return;
-    }
-    // Time this function
-    // auto start = std::chrono::high_resolution_clock::now();
-
-    // visualizations_->getVoxelMarkers(voxel_hash_map_, marker_array,
-    // marker_background_array);
+    did_voxel_map_update_ = false;
 
     // Configure markers
     visualization_msgs::MarkerArray marker_array, marker_background_array;
@@ -432,17 +424,6 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         voxel_centers.push_back(v_point);
     }
 
-    // Get the camera position
-    Eigen::Affine3f T_Map_Cam;
-    tf::StampedTransform transform;
-    if (!tryGetTransform("base_link", map_frame_, ros::Time(0), T_Map_Cam,
-                         transform)) {
-        ROS_ERROR(
-            "Could not get transform from map to camera for voxel "
-            "visualization");
-        return;
-    }
-
     std::vector<float> voxel_uncertanties;
     float max_uncertainty = 0.0;
     for (auto it = hash_map.begin(); it != hash_map.end(); it++) {
@@ -468,11 +449,6 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         }
         std_msgs::ColorRGBA color;
         std::vector<uint8_t> rgb;
-        if (point.x > -3 && point.x < -2 && point.y < -1.5 && point.y > -2) {
-            ROS_INFO("Voxel: %f %f %f", point.x, point.y, point.z);
-            ROS_INFO("Voxel probs: ");
-            std::cout << it->second.getProbabilities() << std::endl;
-        }
         int voxel_class;
         float class_probability;
         it->second.getMostProbClassAndProb(voxel_class, class_probability);
@@ -523,17 +499,24 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         marker_entropies.colors.push_back(color);
     }
 
-    marker_array.markers.push_back(marker_probabilities);
-    marker_array.markers.push_back(marker_uncertainties);
-    marker_array.markers.push_back(marker_entropies);
-    marker_array.markers.push_back(marker_gt);
+    if(marker_probabilities.points.size() > 0) {
+        marker_array.markers.push_back(marker_probabilities);
+    }
+    if(marker_background.points.size() > 0) {
+        marker_background_array.markers.push_back(marker_background);
+    }
+    if(marker_uncertainties.points.size() > 0) {
+        marker_array.markers.push_back(marker_uncertainties);
+    }
+    if(marker_entropies.points.size() > 0) {
+        marker_array.markers.push_back(marker_entropies);
+    }
+    if(marker_gt.points.size() > 0) {
+        marker_array.markers.push_back(marker_gt);
+    }
 
-    // ROS_INFO("Publishing voxel markers with %ld voxels",
-    // marker_array.markers[0].points.size());
     pub_voxel_markers_.publish(marker_array);
-    // auto finish = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double> elapsed = finish - start;
-    // ROS_INFO("Time to publish voxel markers: %f", elapsed.count());
+    pub_background_markers_.publish(marker_background_array);
 }
 
 bool VoxelHashMapNode::saveVoxelMap() {

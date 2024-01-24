@@ -4,7 +4,8 @@
 #include <vector>
 
 static const std::vector<std::vector<uint8_t>> LABEL_TO_RGB_8 = {
-    {0, 0, 0},       {128, 0, 128},  // 5=bottle
+    {0, 0, 0},                       // 0=background
+    {128, 0, 128},                   // 5=bottle
     {192, 0, 0},                     // 9=chair
     {192, 128, 0},                   // 11=diningtable
     {192, 128, 128},                 // 15=person

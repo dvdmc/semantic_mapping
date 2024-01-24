@@ -114,7 +114,7 @@ class VoxelInfo {
     float getTraceUncertainties() const { return uncertainties.sum(); }
 
     void getMostProbClassAndProb(int &class_id, float &prob) {
-        int max_class = 0;
+        int max_class = -1;
         float max_prob = 0;
         for (int i = 0; i < probabilities.size(); i++) {
             if (probabilities(i, 0) > max_prob) {
@@ -126,7 +126,7 @@ class VoxelInfo {
         prob = max_prob;
     }
     int getMostProbableClass() const {
-        int max_class = 0;
+        int max_class = -1;
         float max_prob = 0;
         for (int i = 0; i < probabilities.size(); i++) {
             if (probabilities(i, 0) > max_prob) {
@@ -137,7 +137,7 @@ class VoxelInfo {
         return max_class;
     }
     int getGtClass() const {
-        int max_class = 0;
+        int max_class = -1;
         int max_count = 0;
         for (int i = 0; i < gt_class_count.size(); i++) {
             if (gt_class_count(i, 0) > max_count) {
