@@ -91,6 +91,7 @@ class VoxelHashMapNode {
 
     bool p_save_experiment_;
     std::string p_save_directory_path_;
+    std::string p_experiment_map_name_;
     std::string p_save_path_;
     int p_save_each_n_updates_;
 

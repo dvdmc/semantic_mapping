@@ -13,7 +13,7 @@
         <remap from="point_cloud" to="cam0/point_cloud"/>
     </node>
 
-    <node pkg="sensors_tools_ros" type="semantic_node.py" name="semantic_sensor" output="screen">
+    <node pkg="sensors_tools_ros" type="semantic_node.py" name="semantic_sensor">
         <rosparam command="load" file="$(find sensors_tools_ros)/cfg/sensor.yaml" />
     </node>
     

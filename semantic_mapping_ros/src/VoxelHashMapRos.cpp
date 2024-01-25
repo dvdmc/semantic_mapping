@@ -108,6 +108,12 @@ void VoxelHashMapNode::rosInit() {
             "/tmp/semantic_mapping/");
         p_save_directory_path_ = "/tmp/semantic_mapping/";
     }
+    if (!nh_private_.getParam("experiment_map_name", p_experiment_map_name_)) {
+        ROS_WARN(
+            "experiment_save_path not set, using default: "
+            "/tmp/semantic_mapping/");
+        p_experiment_map_name_ = "unnammed";
+    }
     if (!nh_private_.getParam("visualize_semantics", p_visualize_semantics_)) {
         ROS_WARN("visualize_semantics not set, using default: true");
         p_visualize_semantics_ = true;
@@ -193,9 +199,10 @@ void VoxelHashMapNode::rosInit() {
         std::stringstream stream;
         stream << std::fixed << std::setprecision(2) << p_beta_;
         std::string beta_str = stream.str();
-        p_save_path_ = p_save_directory_path_ + std::string(timeString) + "_" +
-                       dl_method + "_" + fusion_method + "_" +
-                       uncertainty_method + "_" + beta_str + "/";
+        p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
+                       "/" + std::string(timeString) + "_" + dl_method + "_" +
+                       fusion_method + "_" + uncertainty_method + "_" +
+                       beta_str + "/";
         ROS_INFO("Save path: %s", p_save_path_.c_str());
         // Try to create the directory if it doesn't exist
         if (!fs::create_directories(p_save_path_)) {
@@ -357,7 +364,8 @@ inline bool VoxelHashMapNode::tryGetTransform(const std::string &frame_id,
 }
 
 void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
-    if (!p_visualize_semantics_ || voxel_hash_map_->size() == 0 || !did_voxel_map_update_ ) {
+    if (!p_visualize_semantics_ || voxel_hash_map_->size() == 0 ||
+        !did_voxel_map_update_) {
         return;
     }
     did_voxel_map_update_ = false;
@@ -503,19 +511,19 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         marker_entropies.colors.push_back(color);
     }
 
-    if(marker_probabilities.points.size() > 0) {
+    if (marker_probabilities.points.size() > 0) {
         marker_array.markers.push_back(marker_probabilities);
     }
-    if(marker_background.points.size() > 0) {
+    if (marker_background.points.size() > 0) {
         marker_background_array.markers.push_back(marker_background);
     }
-    if(marker_uncertainties.points.size() > 0) {
+    if (marker_uncertainties.points.size() > 0) {
         marker_array.markers.push_back(marker_uncertainties);
     }
-    if(marker_entropies.points.size() > 0) {
+    if (marker_entropies.points.size() > 0) {
         marker_array.markers.push_back(marker_entropies);
     }
-    if(marker_gt.points.size() > 0) {
+    if (marker_gt.points.size() > 0) {
         marker_array.markers.push_back(marker_gt);
     }
 
