@@ -98,6 +98,19 @@ class VoxelHashMapNode {
     int seq_number_;
     int n_updates_since_last_save_;
 
+    // Accessor
+    inline std::shared_ptr<semantic_mapping::VoxelHashMap> getVoxelHashMap() {
+        // TODO: Not thread safe at the moment. Could be a problem if
+        // a pointcloud is received at the same time as the map is being
+        // accessed for planning.
+        return voxel_hash_map_;
+    };
+
+    inline std::shared_ptr<semantic_mapping::VoxelIntegrator> getVoxelIntegrator() {
+        return voxel_integrator_;
+    };
+
+
     // Methods
 
     void rosInit();
