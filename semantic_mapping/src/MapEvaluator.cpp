@@ -2,6 +2,7 @@
 #include <boost/program_options.hpp>
 
 #include<semantic_mapping/MapEvaluator.hpp>
+#include<semantic_mapping/metrics.hpp>
 
 namespace po = boost::program_options;
 
@@ -15,7 +16,8 @@ int main(int argc, char** argv)
         ("num_classes", po::value<int>()->required(), "the number of classes in the map required for deserialization")
         ("resolution", po::value<float>()->required(), "the resolution of the map required for deserialization")
         ("exp_path", po::value<std::string>()->required(), "the path to the experiment folder")
-    ;
+        ("volumetric", po::value<bool>()->default_value(false), "if the evaluation contains volumetric information")
+        ("total_voxels", po::value<float>(), "an upper bound for the total number of voxels in the map");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -56,6 +58,30 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    bool volumetric;
+    if (vm.count("volumetric")) {
+        volumetric = vm["volumetric"].as<bool>();
+        std::cout << "Volumetric was set to " 
+                  << volumetric << ".\n";
+    } else {
+        std::cout << "Volumetric was not set.\n";
+        return 1;
+    }
+
+    int total_voxels;
+    if (volumetric)
+    {
+        if (vm.count("total_voxels")) {
+            total_voxels = vm["total_voxels"].as<float>();
+            std::cout << "Total voxels was set to " 
+                    << total_voxels << ".\n";
+        } else {
+            std::cout << "Total voxels was not set.\n";
+            return 1;
+        }
+    }
+
+
     // The evaluation work as follows: 
     // 1. Read the experiment folder
     // 3. There are maps captured in sequence, each one is called ######.semantic
@@ -70,6 +96,8 @@ int main(int argc, char** argv)
         return 0;
     }
     map_evaluator.setExperimentFolder(experiment_folder);
+
+    map_evaluator.is_volumetric_data = volumetric;
 
     // Read the maps
     std::vector<std::string> map_filenames;
@@ -95,7 +123,17 @@ int main(int argc, char** argv)
     for (int i = 0; i < map_filenames.size(); i++)
     {
         std::cout << "Evaluating map " << i << std::endl;
+        std::unique_ptr<semantic_mapping::SemanticMapMetrics> metrics;
+        if(volumetric)
+        {
+            metrics = std::unique_ptr<semantic_mapping::SemanticVolumetricMapMetrics>(new semantic_mapping::SemanticVolumetricMapMetrics());
+        } else {
+            metrics = std::unique_ptr<semantic_mapping::SemanticMapMetrics>(new semantic_mapping::SemanticMapMetrics());
+        }
+
         map_evaluator.openMap(map_filenames[i]);
+        map_evaluator.setMetrics(metrics.get());
+        map_evaluator.setTotalVoxels(total_voxels);
         map_evaluator.evaluateMap();
     }
     

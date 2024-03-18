@@ -1,0 +1,6 @@
+n_classes: 21
+method:
+  dl_method: "DET"
+  fusion_method: "BAY"
+  uncertainty_method: "UNCERTAINTY"
+  beta: 0.3

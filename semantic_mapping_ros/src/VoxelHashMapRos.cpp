@@ -72,20 +72,21 @@ void VoxelHashMapNode::rosInit() {
 
     std::string dl_method, fusion_method, uncertainty_method, controller_type;
     // Exp parameters related to p(x|z_1...t) = p(x|z_1...t-1) * p(z_t|x)
-    if (!nh_private_.getParam("dl_method", dl_method)) {
+    if (!nh_private_.getParam("method/dl_method", dl_method)) {
         ROS_WARN("dl_method not, using default: MCD");
         dl_method = "MCD";
     }
-    if (!nh_private_.getParam("fusion_method", fusion_method)) {
+    if (!nh_private_.getParam("method/fusion_method", fusion_method)) {
         ROS_WARN("fusion_method not set, using default: W_BAY");
         fusion_method = "W_BAY";
     }
-    if (!nh_private_.getParam("uncertainty_method", uncertainty_method)) {
+    if (!nh_private_.getParam("method/uncertainty_method",
+                              uncertainty_method)) {
         // If we are using uncerts as in MCD or confidence based method
         ROS_WARN("uncertainty_method not set, using default: UNCERTAINTY");
         uncertainty_method = "UNCERTAINTY";
     }
-    if (!nh_private_.getParam("beta", p_beta_)) {
+    if (!nh_private_.getParam("method/beta", p_beta_)) {
         // Beta for regularization
         ROS_WARN("beta not set, using default: 0.3");
         p_beta_ = 0.3;
@@ -120,8 +121,12 @@ void VoxelHashMapNode::rosInit() {
     }
     if (!nh_private_.getParam("visualize_semantics_frequency",
                               p_vis_sem_freq_)) {
-        ROS_WARN("visualize_semantics_frequency not set, using default: true");
+        ROS_WARN("visualize_semantics_frequency not set, using default: 1.0");
         p_vis_sem_freq_ = 1.0;
+    }
+    if (!nh_private_.getParam("visualization_top_height", p_vis_top_height_)) {
+        ROS_WARN("visualization_top_height not set, using default: 3.0");
+        p_vis_top_height_ = 3.0;
     }
 
     // Parameters processing
@@ -143,6 +148,7 @@ void VoxelHashMapNode::rosInit() {
     n_updates_since_last_save_ = 0;
     seq_number_ = 0;
     // Print config
+    ROS_INFO("-----VoxelHashMapNode configuration-----");
     ROS_INFO("dl_method: %s", dl_method.c_str());
     ROS_INFO("fusion_method: %s", fusion_method.c_str());
     ROS_INFO("uncertainty_method: %s", uncertainty_method.c_str());
@@ -195,14 +201,15 @@ void VoxelHashMapNode::rosInit() {
         std::strftime(std::data(timeString), std::size(timeString),
                       "%F_%H-%M-%S", std::gmtime(&time));
         // The save path will be
-        // *p_save_path*/*timestamp*_dl_method_fusion_method_uncertainty_method_beta/
+        // *p_save_path*/dl_method_fusion_method_uncertainty_method_beta/*timestamp*/
         std::stringstream stream;
         stream << std::fixed << std::setprecision(2) << p_beta_;
         std::string beta_str = stream.str();
         p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
-                       "/" + std::string(timeString) + "_" + dl_method + "_" +
-                       fusion_method + "_" + uncertainty_method + "_" +
-                       beta_str + "/";
+                       "/" + dl_method + "_" + fusion_method + "_" +
+                       uncertainty_method + "_" + beta_str + "/" +
+                       std::string(timeString) + "/";
+
         ROS_INFO("Save path: %s", p_save_path_.c_str());
         // Try to create the directory if it doesn't exist
         if (!fs::create_directories(p_save_path_)) {
@@ -215,6 +222,14 @@ void VoxelHashMapNode::rosInit() {
         config_file << "uncertainty_method: " << uncertainty_method
                     << std::endl;
         config_file << "beta: " << p_beta_ << std::endl;
+        config_file << "saved_each_n_updates: " << p_save_each_n_updates_
+                    << std::endl;
+        config_file << "depth_threshold: " << p_depth_threshold_ << std::endl;
+        config_file << "n_classes: " << p_n_classes_ << std::endl;
+        config_file << "resolution: " << p_resolution_ << std::endl;
+        if (p_dl_method_ == DlMethod::MCD) {
+            config_file << "n_samples_mc: " << p_n_samples_mc_ << std::endl;
+        }
         config_file.close();
     }
 
@@ -289,6 +304,10 @@ void VoxelHashMapNode::pcdCallback(
         } else {
             ROS_ERROR("Unknown DL method");
         }
+        // ROS_ERROR("Class probs");
+        // for (int i = 0; i < p_n_classes_; i++) {
+        //     ROS_ERROR("%f", processed_measurement.getClassProbability(i));
+        // }
         voxel_hash_map_->integrateVoxel(point, processed_measurement);
     }
 
@@ -424,7 +443,7 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
     marker_entropies.ns = "entropies";
     marker_gt.ns = "ground_truth";
 
-    auto hash_map = voxel_hash_map_->getVoxelHashMap();
+    auto hash_map = voxel_hash_map_->getVoxelHashMapData();
 
     std::vector<Eigen::Vector3f> voxel_centers;
     for (auto it = hash_map.begin(); it != hash_map.end(); it++) {
@@ -454,8 +473,8 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
         point.y = v_point(1);
         point.z = v_point(2);
 
-        if (point.z >
-            3.0)  // Cut off the ceiling of the room for better visualization
+        if (point.z > p_vis_top_height_)  // Cut off the ceiling of the room for
+                                          // better visualization
         {
             continue;
         }

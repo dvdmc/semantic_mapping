@@ -37,7 +37,7 @@ catkin_package(
   INCLUDE_DIRS include
   ${EIGEN3_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  LIBRARIES
+  LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS roscpp std_msgs message_runtime message_generation cv_bridge tf_conversions semantic_mapping
   DEPENDS
 )
@@ -56,6 +56,16 @@ include_directories(
 #############
 # LIBRARIES #
 #############
+
+add_library(semantic_mapping_ros
+  src/VoxelHashMapRos.cpp
+)
+
+target_link_libraries(semantic_mapping_ros
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+  Eigen3::Eigen
+)
 
 add_executable(voxel_map
   src/VoxelHashMapRos_node.cpp

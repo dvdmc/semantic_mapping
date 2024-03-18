@@ -149,10 +149,18 @@ class VoxelInfo {
     }
 
     float computeEntropy() {
+        // H = - sum(p_i * log(p_i))
         float entropy = 0.0f;
-        for (int i = 0; i < probabilities.rows(); i++) {
-            if (probabilities(i) > 0.0f)
-                entropy -= probabilities(i) * std::log(probabilities(i));
+        if(getMostProbableClass() == -1)
+            // If there is no most probable class, the entropy is the maximum
+            entropy = probabilities.rows() * std::log(1.0f / probabilities.rows());
+        else
+        {
+            for (int i = 0; i < probabilities.rows(); i++) {
+                if (probabilities(i) > 0.0f)
+                    entropy += probabilities(i) * std::log(probabilities(i));
+            }
+            entropy = -entropy;
         }
         return entropy;
     }

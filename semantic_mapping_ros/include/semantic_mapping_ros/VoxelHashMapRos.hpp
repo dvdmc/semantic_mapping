@@ -27,6 +27,25 @@ class VoxelHashMapNode {
     VoxelHashMapNode(ros::NodeHandle &nh, ros::NodeHandle &nh_private);
     ~VoxelHashMapNode();
 
+    // Accessor
+    inline std::shared_ptr<semantic_mapping::VoxelHashMap> getVoxelHashMapSharedPtr() {
+        // TODO: Not thread safe at the moment. Could be a problem if
+        // a pointcloud is received at the same time as the map is being
+        // accessed for planning.
+        return voxel_hash_map_;
+    };
+
+    inline std::shared_ptr<semantic_mapping::VoxelIntegrator> getVoxelIntegratorSharedPtr() {
+        return voxel_integrator_;
+    };
+
+    inline float getVoxelSize() { return p_resolution_; };
+
+    inline bool getExperimentSave() { return p_save_experiment_; };
+    inline int getExperimentSaveEachNUpdates() { return p_save_each_n_updates_; };
+    inline std::string getExperimentSavePath() { return p_save_path_; };
+    inline int getSeqNumber() { return seq_number_; };
+    
    private:
     // Members
     std::shared_ptr<VoxelHashMap> voxel_hash_map_;
@@ -83,7 +102,7 @@ class VoxelHashMapNode {
 
     // Visualization
     bool p_visualize_semantics_;
-    double p_vis_sem_freq_;
+    double p_vis_sem_freq_, p_vis_top_height_;
     std::vector<std::vector<uint8_t>> label_to_rgb_;
     // Initialized from semantic utils from the number of classes.
 
@@ -97,19 +116,6 @@ class VoxelHashMapNode {
 
     int seq_number_;
     int n_updates_since_last_save_;
-
-    // Accessor
-    inline std::shared_ptr<semantic_mapping::VoxelHashMap> getVoxelHashMap() {
-        // TODO: Not thread safe at the moment. Could be a problem if
-        // a pointcloud is received at the same time as the map is being
-        // accessed for planning.
-        return voxel_hash_map_;
-    };
-
-    inline std::shared_ptr<semantic_mapping::VoxelIntegrator> getVoxelIntegrator() {
-        return voxel_integrator_;
-    };
-
 
     // Methods
 

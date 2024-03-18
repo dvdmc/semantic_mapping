@@ -72,7 +72,7 @@ class VoxelHashMap {
 
     // Getters
 
-    const std::unordered_map<uint64_t, VoxelInfo> &getVoxelHashMap() const {
+    const std::unordered_map<uint64_t, VoxelInfo> &getVoxelHashMapData() const {
         return voxel_hash_map_;
     }
 
@@ -106,6 +106,24 @@ class VoxelHashMap {
     VoxelInfo getVoxel(const Eigen::Vector3f &point) const {
         uint64_t key = pointToKey(point);
         return getVoxel(key);
+    }
+
+    VoxelInfo* getVoxelPtr(const uint64_t &key) {
+        auto it = voxel_hash_map_.find(key);
+        if (it != voxel_hash_map_.end()) {
+            return &it->second;
+        } else {
+            if (verbose_) {
+                std::cout << "Voxel " << keyToPoint(key).transpose()
+                          << " not initialized, returning default" << std::endl;
+            }
+            return nullptr;
+        }
+    }
+
+    VoxelInfo* getVoxelPtr(const Eigen::Vector3f &point) {
+        uint64_t key = pointToKey(point);
+        return getVoxelPtr(key);
     }
 
     // Get voxel integrator pointer
@@ -196,21 +214,22 @@ class VoxelHashMap {
     // Obtain metrics from the voxel map accounting for the stored GT
     // For the most simplistic approach, we just compute the confusion matrix
     // and leave the rest to the python script.
-    void evaluateVoxelMap(Eigen::MatrixXi &confusion_matrix) {
+    void evaluateVoxelMapConfMatrix(std::vector<std::vector<int>> &confusion_matrix) {
         // Compute the confusion matrix
-        confusion_matrix = Eigen::MatrixXi::Zero(n_classes_, n_classes_);
+        confusion_matrix = std::vector<std::vector<int>>(n_classes_, std::vector<int>(n_classes_, 0));
         std::vector<int> n_samples_per_class(n_classes_, 0);
         for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
              it++) {
             // std::cout << "Class: " << it->second.getMostProbableClass() << " GT class: " << it->second.getGtClass() << std::endl;
             n_samples_per_class[it->second.getGtClass()]++;
-            confusion_matrix(it->second.getGtClass(),
-                             it->second.getMostProbableClass())++;
+            // If current class is unknown we count it as background
+            if (it->second.getMostProbableClass() == -1) {
+                confusion_matrix[it->second.getGtClass()][0]++;
+            } else {
+                confusion_matrix[it->second.getGtClass()][it->second.getMostProbableClass()]++;
+            }
         }
         if (verbose_) {
-            std::cout << "Number of voxels in map: " << voxel_hash_map_.size()
-                      << std::endl;
-            std::cout << "Confusion matrix: " << std::endl;
             // Eigen::IOFormat CleanFmt(4, 0, "   ", "\n", "", "", "", "");
             // std::cout << confusion_matrix.format(CleanFmt) << std::endl;
             std::cout << "Number of samples per class: " << std::endl;
@@ -220,10 +239,20 @@ class VoxelHashMap {
         }
     }
 
+    float getVoxelMapEntropy()
+    {
+        float entropy = 0.0;
+        for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
+             it++) {
+            entropy += it->second.computeEntropy();
+        }
+        return entropy;
+    }
+
     // Dummy function that allows only to print.
     void evaluateVoxelMap() {
-        Eigen::MatrixXi confusion_matrix;
-        evaluateVoxelMap(confusion_matrix);
+        std::vector<std::vector<int>> confusion_matrix;
+        evaluateVoxelMapConfMatrix(confusion_matrix);
     }
 
     // Overload << operator
