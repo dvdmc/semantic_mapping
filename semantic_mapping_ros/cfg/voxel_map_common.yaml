@@ -1,9 +1,9 @@
 depth_threshold: 7
-resolution: 0.1
+resolution: 0.01
 
 map_frame: "map"
 
-save_experiment: true
+save_experiment: false
 save_each_n_updates: 10
 experiment_save_path: "/home/semantic_mapping/experiments/"
 

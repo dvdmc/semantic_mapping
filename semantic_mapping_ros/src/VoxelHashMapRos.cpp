@@ -253,7 +253,7 @@ void VoxelHashMapNode::pcdCallback(
     Eigen::Affine3f T_Map_Cam;
     tf::StampedTransform transform;
 
-    if (!tryGetTransform(msg->header.frame_id, map_frame_, msg->header.stamp,
+    if (!tryGetTransform(msg->header.frame_id, map_frame_, ros::Time(0),
                          T_Map_Cam, transform)) {
         ROS_ERROR("Could not get transform from map to camera in pcd callback");
         return;
@@ -261,7 +261,7 @@ void VoxelHashMapNode::pcdCallback(
     last_update_time_ = msg->header.stamp;
     Eigen::Vector3f cam_pos = T_Map_Cam.translation();
 
-    ROS_INFO("Received point cloud with %d points", msg->width * msg->height);
+    // ROS_INFO("Received point cloud with %d points", msg->width * msg->height);
     // Loop all iterators
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_rgba,
                                    ++iter_gt_class, ++iter_class_prob) {
@@ -313,8 +313,8 @@ void VoxelHashMapNode::pcdCallback(
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    ROS_INFO("Time to fuse map: %f", elapsed.count());
-    ROS_INFO("Map size: %ld", voxel_hash_map_->size());
+    // ROS_INFO("Time to fuse map: %f", elapsed.count());
+    // ROS_INFO("Map size: %ld", voxel_hash_map_->size());
     did_voxel_map_update_ = true;
     // Save map for evaluation
     if (p_save_experiment_ && voxel_hash_map_->size() > 0) {
@@ -327,7 +327,7 @@ void VoxelHashMapNode::pcdCallback(
                 ROS_ERROR("Could not save voxel map");
             }
         }
-        ROS_INFO("Status: %d", seq_number_);
+        // ROS_INFO("Status: %d", seq_number_);
     }
 }
 
