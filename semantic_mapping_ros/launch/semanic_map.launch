@@ -8,13 +8,14 @@
     <node pkg="semantic_mapping_ros" type="voxel_map" name="voxel_map" output="screen">
         <param name="experiment_save_path" value="$(arg experiment_save_path)"/>
 
-        <rosparam command="load" file="$(find semantic_mapping_ros)/cfg/voxel_map.yaml" />
+        <rosparam command="load" file="$(find semantic_mapping_ros)/cfg/voxel_map_common.yaml" />
+        <rosparam command="load" file="$(find semantic_mapping_ros)/cfg/voxel_map_det_reg.yaml" />
 
         <remap from="point_cloud" to="cam0/point_cloud"/>
     </node>
 
-    <!-- <node pkg="sensors_tools_ros" type="semantic_node.py" name="semantic_sensor">
+    <node pkg="sensors_tools_ros" type="semantic_node.py" name="semantic_sensor">
         <rosparam command="load" file="$(find sensors_tools_ros)/cfg/sensor.yaml" />
-    </node> -->
+    </node>
     
 </launch>
