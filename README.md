@@ -5,6 +5,12 @@ It includes the data structure for the map, several fusion methods for the voxel
 evaluation procedures and a script to evaluate maps. The mapping system is intended to
 be used by the integrated ROS node or by including it as a library as in the case of [ipp_tools](https://github.com/dvdmc/ipp_tools).
 
+
+<p float="center" align="middle">
+  <img src="media/map.png" width="50%"/>
+  <p align="middle">Note: this image shows a semantic map overlayed on a Voxblox map.</p>
+</p>
+
 ## Installation
 
 Clone the repository with:
