@@ -103,6 +103,11 @@ void VoxelHashMapNode::rosInit() {
         ROS_WARN("save_each_n_updates not set, using default: 10");
         p_save_each_n_updates_ = 10;
     }
+    if (!nh_private_.getParam("variant", p_variant_name_)) {
+        ROS_ERROR("variant not set, using default: \"\"");
+        p_variant_name_ = "";
+        return;
+    }
     if (!nh_private_.getParam("experiment_save_path", p_save_directory_path_)) {
         ROS_WARN(
             "experiment_save_path not set, using default: "
@@ -139,7 +144,7 @@ void VoxelHashMapNode::rosInit() {
 
     if (p_dl_method_ == DlMethod::MCD) {
         // If we are using MCD we need to sample from the network
-        if (!nh_private_.getParam("n_samples_mc", p_n_samples_mc_)) {
+        if (!nh_private_.getParam("method/n_samples_mc", p_n_samples_mc_)) {
             ROS_WARN("n_samples_mc not set, using default: 10");
             p_n_samples_mc_ = 10;
         }
@@ -149,6 +154,7 @@ void VoxelHashMapNode::rosInit() {
     seq_number_ = 0;
     // Print config
     ROS_INFO("-----VoxelHashMapNode configuration-----");
+    ROS_INFO("variant name: %s", p_variant_name_.c_str());
     ROS_INFO("dl_method: %s", dl_method.c_str());
     ROS_INFO("fusion_method: %s", fusion_method.c_str());
     ROS_INFO("uncertainty_method: %s", uncertainty_method.c_str());
@@ -205,10 +211,18 @@ void VoxelHashMapNode::rosInit() {
         std::stringstream stream;
         stream << std::fixed << std::setprecision(2) << p_beta_;
         std::string beta_str = stream.str();
-        p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
-                       "/" + dl_method + "_" + fusion_method + "_" +
-                       uncertainty_method + "_" + beta_str + "/" +
-                       std::string(timeString) + "/";
+
+        if (p_variant_name_ == "") {
+            p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
+                        "/" + dl_method + "_" +
+                        fusion_method + "_" + uncertainty_method + "_" +
+                        beta_str + "/" + std::string(timeString) + "/";
+        } else {
+            p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
+                        "/" + p_variant_name_ + "_" + dl_method + "_" +
+                        fusion_method + "_" + uncertainty_method + "_" +
+                        beta_str + "/" + std::string(timeString) + "/";
+        }
 
         ROS_INFO("Save path: %s", p_save_path_.c_str());
         // Try to create the directory if it doesn't exist
@@ -217,6 +231,7 @@ void VoxelHashMapNode::rosInit() {
         }
         // Save the configuration used in the experiment path
         std::ofstream config_file(p_save_path_ + "config.txt");
+        config_file << "variant_name: " << p_variant_name_ << std::endl;
         config_file << "dl_method: " << dl_method << std::endl;
         config_file << "fusion_method: " << fusion_method << std::endl;
         config_file << "uncertainty_method: " << uncertainty_method
@@ -253,7 +268,7 @@ void VoxelHashMapNode::pcdCallback(
     Eigen::Affine3f T_Map_Cam;
     tf::StampedTransform transform;
 
-    if (!tryGetTransform(msg->header.frame_id, map_frame_, ros::Time(0),
+    if (!tryGetTransform(msg->header.frame_id, map_frame_, msg->header.stamp,
                          T_Map_Cam, transform)) {
         ROS_ERROR("Could not get transform from map to camera in pcd callback");
         return;
@@ -261,8 +276,8 @@ void VoxelHashMapNode::pcdCallback(
     last_update_time_ = msg->header.stamp;
     Eigen::Vector3f cam_pos = T_Map_Cam.translation();
 
-    // ROS_INFO("Received point cloud with %d points", msg->width * msg->height);
-    // Loop all iterators
+    // ROS_INFO("Received point cloud with %d points", msg->width *
+    // msg->height); Loop all iterators
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_rgba,
                                    ++iter_gt_class, ++iter_class_prob) {
         Eigen::Vector3f point(*iter_x, *iter_y, *iter_z);
@@ -346,7 +361,7 @@ void VoxelHashMapNode::obtainMCClassProb(
                 iter_class_prob[sample * p_n_classes_ + n_class];
         }
         VoxelInfo voxel_info(class_prob);
-        // We join all all the samples for one pixel
+        // We join all the samples for one pixel
         class_prob_mc[sample] = voxel_info;
     }
     // Fuse the samples with MC for the same pixel/point
