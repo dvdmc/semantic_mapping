@@ -1,5 +1,6 @@
-depth_threshold: 7
-resolution: 0.01
+depth_threshold: 8.0
+resolution: 0.1
+n_classes: 8
 
 map_frame: "map"
 

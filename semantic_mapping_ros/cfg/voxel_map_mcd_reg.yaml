@@ -1,6 +1,6 @@
-n_classes: 8
 method:
   dl_method: "MCD"
   fusion_method: "W_BAY"
   uncertainty_method: "UNCERTAINTY"
   beta: 0.3
+  n_samples_mc: 32

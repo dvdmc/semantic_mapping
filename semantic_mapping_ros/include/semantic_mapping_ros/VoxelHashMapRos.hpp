@@ -115,6 +115,7 @@ class VoxelHashMapNode {
                                  // experiments with the same method.
     std::string p_save_path_;
     int p_save_each_n_updates_;
+    bool p_save_last_only_;
 
     int seq_number_;
     int n_updates_since_last_save_;

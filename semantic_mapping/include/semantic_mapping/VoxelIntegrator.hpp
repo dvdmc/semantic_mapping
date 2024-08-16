@@ -8,6 +8,7 @@
 
 #include <semantic_mapping/VoxelInfo.hpp>
 
+/// @brief Voxel integrator
 namespace semantic_mapping {
 enum class FusionMethod {
     KF,
@@ -16,6 +17,8 @@ enum class FusionMethod {
     SUM,
     SUM_PROBS,
     GAUSSIAN,
+    W_DIRCHLET,
+    DIRICHLET
 };
 
 enum class UncertaintyType {
@@ -29,14 +32,65 @@ class VoxelIntegrator {
     FusionMethod fusion_method_;
     UncertaintyType uncertainty_type_;
     float beta_;
+    Eigen::ArrayXf class_weights_;
+    std::function<void(const VoxelInfo &, const VoxelInfo &, VoxelInfo &)>
+        fusion_function_;
 
    public:
+    UncertaintyType getUncertaintyType() const { return uncertainty_type_; }
+    
     VoxelIntegrator(int num_classes, FusionMethod fusion_method,
                     UncertaintyType uncertainty_type, float beta)
         : num_classes_(num_classes),
           fusion_method_(fusion_method),
           uncertainty_type_(uncertainty_type),
           beta_(beta) {
+        class_weights_ = Eigen::ArrayXf::Ones(num_classes_, 1);
+        // Set beta per class if different than 0.0
+        // Entropy: {0.0478, 0.0874, 0.1845, 0.1289, 0.1519, 0.1659, 0.0806, 0.1468, 0.0922, 0.2434, 0.1832, 0.2033, 0.1433, 0.1083, 0.1926, 0.1457, 0.1807, 0.1739, 0.2346, 0.0894, 0.1287}
+        if (beta_ == 1.0) {
+            Eigen::ArrayXf weights(num_classes_, 1);
+            // if (num_classes_ == 20)
+            // {
+            //     weights << 0.0478, 0.0874, 0.1845, 0.1289, 0.1519, 0.1659, 0.0806, // Entropy
+            //                 0.1468, 0.0922, 0.2434, 0.1832, 0.2033, 0.1433, 0.1083, 
+            //                 0.1926, 0.1457, 0.1807, 0.1739, 0.2346, 0.0894, 0.1287;
+            //     // weights << 0.1063, 0.5525, 0.4314, 0.4305, 0.5077, 0.4005, 0.2744, // ECE
+            //     //             0.3664, 0.3246, 0.5643, 0.3654, 0.5190, 0.3370, 0.3909, 
+            //     //             0.4434, 0.4497, 0.4953, 0.4543, 0.5643, 0.4091, 0.5187;
+            // } else {
+            //     weights = Eigen::ArrayXf::Ones(num_classes_, 1);
+            // }
+            class_weights_ = 1-weights.array();
+        }
+        if (fusion_method_ == FusionMethod::KF) {
+            fusion_function_ = std::bind(
+                &VoxelIntegrator::fusionKF, this, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3);
+        } else if (fusion_method_ == FusionMethod::BAY ||
+                   fusion_method_ == FusionMethod::GAUSSIAN) {
+            fusion_function_ =
+                std::bind(&VoxelIntegrator::fusionDeterministicBayesian, this,
+                          std::placeholders::_1, std::placeholders::_2,
+                          std::placeholders::_3);
+        } else if (fusion_method_ == FusionMethod::W_BAY) {
+            fusion_function_ =
+                std::bind(&VoxelIntegrator::fusionWeightedBayesian, this,
+                          std::placeholders::_1, std::placeholders::_2,
+                          std::placeholders::_3);
+        } else if (fusion_method_ == FusionMethod::SUM) {
+            fusion_function_ = std::bind(
+                &VoxelIntegrator::fusionSum, this, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3);
+        } else if (fusion_method_ == FusionMethod::SUM_PROBS) {
+            fusion_function_ =
+                std::bind(&VoxelIntegrator::fusionSumProbabilities, this,
+                          std::placeholders::_1, std::placeholders::_2,
+                          std::placeholders::_3);
+
+        } else {
+            std::cout << "ERROR: Fusion type not supported" << std::endl;
+        }
     }
     ~VoxelIntegrator(){};
 
@@ -69,8 +123,13 @@ class VoxelIntegrator {
             Eigen::ArrayXf::Ones(current.getNumClasses(), 1) /
             current.getNumClasses();
         Eigen::ArrayXf input_probabilities = input.getProbabilities();
+        if(beta_ == 1.0){
         input_probabilities =
-            (1 - beta_) * input.getProbabilities() + (beta_)*uniform;
+            (1 - class_weights_.array()) * input.getProbabilities() + (class_weights_.array())*uniform;
+        } else {
+            input_probabilities =
+                (1 - beta_) * input.getProbabilities() + (beta_)*uniform;
+        }
         Eigen::ArrayXf product =
             (current.getProbabilities() * input_probabilities);
         output.setProbabilities((product / product.sum()).matrix());
@@ -78,22 +137,22 @@ class VoxelIntegrator {
 
     void fusionWeightedBayesian(const VoxelInfo &current,
                                 const VoxelInfo &input, VoxelInfo &output) {
-        // Fusion weighted bayesian multi-class
+        // Fusion weighted bayesian multi-class. Alphas are stored in uncertainty
         Eigen::ArrayXf current_alpha;
         Eigen::ArrayXf input_alpha;
         if (uncertainty_type_ == UncertaintyType::UNCERTAINTY) {
             current_alpha =
-                (-(1e-9 + current.getUncertainties().array()).log()).max(0.0f);
+                (-(current.getUncertainties().array()+ 1e-9).log()).max(0.0f); // -log(unc)
             input_alpha =
-                (-(1e-9 + input.getUncertainties().array()).log()).max(0.0f);
+                (-(input.getUncertainties().array()+ 1e-9).log()).max(0.0f);
         } else if (uncertainty_type_ == UncertaintyType::CONFIDENCE) {
             // If no samples have been added yet, use fixed weight different
             // than defined initial for UNCERTAINTY
             if (current.getSamplesCount() == 0) {
-                current_alpha = Eigen::ArrayXf::Ones(num_classes_, 1) * 50;
+                current_alpha = Eigen::ArrayXf::Ones(num_classes_, 1) * 0.001f;
             }
-            current_alpha = current.getUncertainties().array();
-            input_alpha = input.getUncertainties().array();
+            current_alpha = (current.getUncertainties().array()/100.0f).exp(); // exp(unc)
+            input_alpha = (input.getUncertainties().array()/100.0f).exp();
         } else {
             std::cout << "ERROR: Uncertainty type not supported" << std::endl;
         }
@@ -104,9 +163,14 @@ class VoxelIntegrator {
         Eigen::ArrayXf input_class_ps_weighted;
         Eigen::ArrayXf uniform =
             Eigen::ArrayXf::Ones(num_classes_, 1) / float(num_classes_);
+
+        if(beta_ == 1.0){
         input_class_ps_weighted =
-            ((1 - beta_) * input.getProbabilities() + beta_ * uniform)
-                .pow(input_alpha / max_alpha);
+            ((1 - class_weights_.array()) * input.getProbabilities() + (class_weights_.array()))*uniform;
+        } else {
+            input_class_ps_weighted =
+            ((1 - beta_) * input.getProbabilities() + (beta_)*uniform).pow(input_alpha / max_alpha);;
+        }
 
         // Normalization constants for each class to get a probability
         // distribution
@@ -114,8 +178,13 @@ class VoxelIntegrator {
         output.setProbabilities(product / product.sum());
 
         // Epistemic uncertainty
-        output.setUncertainties(current.getUncertainties().array().min(
-            input.getUncertainties().array()));
+        if (uncertainty_type_ == UncertaintyType::UNCERTAINTY) {
+            output.setUncertainties(current.getUncertainties().array().min(
+                input.getUncertainties().array()));
+        } else if (uncertainty_type_ == UncertaintyType::CONFIDENCE) {
+            output.setUncertainties(current.getUncertainties().array().max(
+                input.getUncertainties().array()));
+        }
     }
 
     float multiVariateGaussian(const Eigen::ArrayXf &x,
@@ -178,23 +247,10 @@ class VoxelIntegrator {
         output.setProbabilities(probabilities);
     }
 
-    // TODO: This should  be assigned in the constructor and only checked once
     VoxelInfo fuseVoxel(const VoxelInfo &current, const VoxelInfo &input) {
         VoxelInfo output(num_classes_);
-        if (fusion_method_ == FusionMethod::KF) {
-            fusionKF(current, input, output);
-        } else if (fusion_method_ == FusionMethod::BAY ||
-                   fusion_method_ == FusionMethod::GAUSSIAN) {
-            fusionDeterministicBayesian(current, input, output);
-        } else if (fusion_method_ == FusionMethod::W_BAY) {
-            fusionWeightedBayesian(current, input, output);
-        } else if (fusion_method_ == FusionMethod::SUM) {
-            fusionSum(current, input, output);
-        } else if (fusion_method_ == FusionMethod::SUM_PROBS) {
-            fusionSumProbabilities(current, input, output);
-        } else {
-            std::cout << "ERROR: Fusion type not supported" << std::endl;
-        }
+
+        fusion_function_(current, input, output);
 
         output.setSamplesCount(current.getSamplesCount() +
                                input.getSamplesCount());

@@ -90,6 +90,16 @@ class VoxelHashMap {
     float getResolution() const { return resolution_; }
     int getNumClasses() const { return n_classes_; }
 
+    bool tryGetVoxelPtr(const uint64_t &key, VoxelInfo &voxel) const {
+        auto it = voxel_hash_map_.find(key);
+        if (it != voxel_hash_map_.end()) {
+            voxel = it->second;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     // Get voxel from map
     VoxelInfo getVoxel(const uint64_t &key) const {
         auto it = voxel_hash_map_.find(key);
@@ -144,18 +154,22 @@ class VoxelHashMap {
         std::unordered_map<uint64_t, VoxelInfo>::iterator it =
             voxel_hash_map_.find(key);
         if (it == voxel_hash_map_.end()) {
+            // std::cout << "Adding new voxel " << keyToPoint(key).transpose() << std::endl;
             // Initialize the voxel with neutral information if prior is
             // available (default true)
             if (no_prior) {
                 voxel_hash_map_[key] = voxel_info;
             } else {
+
                 VoxelInfo init_voxel_info(n_classes_);
                 voxel_hash_map_[key] =
                     integrator_->fuseVoxel(init_voxel_info, voxel_info);
             }
         } else {
+            // std::cout << "Updating voxel " << keyToPoint(key).transpose() << std::endl;
             it->second = integrator_->fuseVoxel(it->second, voxel_info);
         }
+        // std::cout << "Finished voxel " << keyToPoint(key).transpose() << std::endl;
     }
 
     // Integrate single voxel measurement into map
@@ -211,49 +225,23 @@ class VoxelHashMap {
         }
     }
 
-    // Obtain metrics from the voxel map accounting for the stored GT
-    // For the most simplistic approach, we just compute the confusion matrix
-    // and leave the rest to the python script.
-    void evaluateVoxelMapConfMatrix(std::vector<std::vector<int>> &confusion_matrix) {
-        // Compute the confusion matrix
-        confusion_matrix = std::vector<std::vector<int>>(n_classes_, std::vector<int>(n_classes_, 0));
-        std::vector<int> n_samples_per_class(n_classes_, 0);
-        for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
-             it++) {
-            // std::cout << "Class: " << it->second.getMostProbableClass() << " GT class: " << it->second.getGtClass() << std::endl;
-            n_samples_per_class[it->second.getGtClass()]++;
-            // If current class is unknown we count it as background
-            if (it->second.getMostProbableClass() == -1) {
-                confusion_matrix[it->second.getGtClass()][0]++;
-            } else {
-                confusion_matrix[it->second.getGtClass()][it->second.getMostProbableClass()]++;
-            }
-        }
-        if (verbose_) {
-            // Eigen::IOFormat CleanFmt(4, 0, "   ", "\n", "", "", "", "");
-            // std::cout << confusion_matrix.format(CleanFmt) << std::endl;
-            std::cout << "Number of samples per class: " << std::endl;
-            for (int i = 0; i < n_classes_; i++) {
-                std::cout << n_samples_per_class[i] << " ";
-            }
-        }
-    }
-
-    float getVoxelMapEntropy()
-    {
-        float entropy = 0.0;
-        for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
-             it++) {
-            entropy += it->second.computeEntropy();
-        }
-        return entropy;
-    }
+    // float getVoxelMapEntropy()
+    // {
+    //     float entropy = 0.0;
+    //     for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
+    //          it++) {
+    //         entropy += it->second.computeEntropy();
+    //     }
+    //     return entropy;
+    // }
 
     // Dummy function that allows only to print.
-    void evaluateVoxelMap() {
-        std::vector<std::vector<int>> confusion_matrix;
-        evaluateVoxelMapConfMatrix(confusion_matrix);
-    }
+    // TODO: This was now moved to the map evaluator.
+    // If needed as a runtime srv add a rosnode
+    // void evaluateVoxelMap() {
+    //     std::vector<std::vector<int>> confusion_matrix;
+    //     evaluateVoxelMapConfMatrix(confusion_matrix);
+    // }
 
     // Overload << operator
     friend std::ostream &operator<<(std::ostream &os, const VoxelHashMap &map) {
@@ -271,6 +259,11 @@ class VoxelHashMap {
         archive(voxel_hash_map_, resolution_, n_classes_);
     }
 
+    template <class Archive>
+    void deserialize(Archive &archive) {
+        archive(voxel_hash_map_, resolution_, n_classes_);
+    }
+
     bool serializeVoxelHashMap(std::string filename) {
         std::ofstream file(filename, std::ios::out | std::ios::binary);
         if (!file.is_open()) {
@@ -279,8 +272,8 @@ class VoxelHashMap {
         }
         {
             cereal::BinaryOutputArchive archive(file);
-
-            archive(voxel_hash_map_);
+            // TODO (KNOWN ISSUE): We are just serializing the map. Missing resolution and n_classes!
+            serialize(archive);
         }
         file.close();
         return true;
@@ -294,8 +287,7 @@ class VoxelHashMap {
         }
         {
             cereal::BinaryInputArchive archive(file);
-
-            archive(voxel_hash_map_);
+            deserialize(archive);
         }
         file.close();
         return true;

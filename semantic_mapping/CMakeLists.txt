@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
 
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED core_tools)
 
 catkin_package(
   INCLUDE_DIRS include

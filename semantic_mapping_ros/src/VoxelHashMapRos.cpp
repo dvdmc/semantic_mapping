@@ -17,6 +17,7 @@
 #include <semantic_mapping/SemanticUtils.hpp>
 
 #include <semantic_mapping_ros/VoxelHashMapRos.hpp>
+#include <semantic_mapping/MapEvaluator.hpp>
 
 namespace semantic_mapping {
 
@@ -52,6 +53,7 @@ VoxelHashMapNode::VoxelHashMapNode(ros::NodeHandle &nh,
 
     // Assign integrator to voxel hash map
     voxel_hash_map_->setIntegrator(voxel_integrator_);
+    ROS_INFO("VoxelHashMapNode initialized");
 }
 
 VoxelHashMapNode::~VoxelHashMapNode() {}
@@ -103,10 +105,13 @@ void VoxelHashMapNode::rosInit() {
         ROS_WARN("save_each_n_updates not set, using default: 10");
         p_save_each_n_updates_ = 10;
     }
+    if (!nh_private_.getParam("save_last_only", p_save_last_only_)) {
+        ROS_WARN("save_last_only not set, using default: false");
+        p_save_last_only_ = false;
+    }
     if (!nh_private_.getParam("variant", p_variant_name_)) {
         ROS_ERROR("variant not set, using default: \"\"");
         p_variant_name_ = "";
-        return;
     }
     if (!nh_private_.getParam("experiment_save_path", p_save_directory_path_)) {
         ROS_WARN(
@@ -212,17 +217,11 @@ void VoxelHashMapNode::rosInit() {
         stream << std::fixed << std::setprecision(2) << p_beta_;
         std::string beta_str = stream.str();
 
-        if (p_variant_name_ == "") {
-            p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
-                        "/" + dl_method + "_" +
-                        fusion_method + "_" + uncertainty_method + "_" +
-                        beta_str + "/" + std::string(timeString) + "/";
-        } else {
-            p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
-                        "/" + p_variant_name_ + "_" + dl_method + "_" +
-                        fusion_method + "_" + uncertainty_method + "_" +
-                        beta_str + "/" + std::string(timeString) + "/";
-        }
+
+        p_save_path_ = p_save_directory_path_ + "/" + p_experiment_map_name_ +
+                    "/" + p_variant_name_ + dl_method + "_" +
+                    fusion_method + "_" + uncertainty_method + "_" +
+                    beta_str + "/" + std::string(timeString) + "/";
 
         ROS_INFO("Save path: %s", p_save_path_.c_str());
         // Try to create the directory if it doesn't exist
@@ -239,6 +238,7 @@ void VoxelHashMapNode::rosInit() {
         config_file << "beta: " << p_beta_ << std::endl;
         config_file << "saved_each_n_updates: " << p_save_each_n_updates_
                     << std::endl;
+        config_file << "save_last_only: " << p_save_last_only_ << std::endl;
         config_file << "depth_threshold: " << p_depth_threshold_ << std::endl;
         config_file << "n_classes: " << p_n_classes_ << std::endl;
         config_file << "resolution: " << p_resolution_ << std::endl;
@@ -276,8 +276,8 @@ void VoxelHashMapNode::pcdCallback(
     last_update_time_ = msg->header.stamp;
     Eigen::Vector3f cam_pos = T_Map_Cam.translation();
 
-    // ROS_INFO("Received point cloud with %d points", msg->width *
-    // msg->height); Loop all iterators
+    //ROS_INFO("Received point cloud with %d points", msg->width *
+    // msg->height); //Loop all iterators
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_rgba,
                                    ++iter_gt_class, ++iter_class_prob) {
         Eigen::Vector3f point(*iter_x, *iter_y, *iter_z);
@@ -566,11 +566,19 @@ void VoxelHashMapNode::publishVoxelMarkers(const ros::TimerEvent &event) {
 }
 
 bool VoxelHashMapNode::saveVoxelMap() {
-    // Add the seq_num to the file path
-    std::stringstream ss;
-    ss << p_save_path_ << std::setw(6) << std::setfill('0') << seq_number_
-       << ".semantic";
-    voxel_hash_map_->serializeVoxelHashMap(ss.str());
+    if(!p_save_last_only_)
+    {
+        // Add the seq_num to the file path
+        std::stringstream ss;
+        ss << p_save_path_ << std::setw(6) << std::setfill('0') << seq_number_
+        << ".semantic";
+        voxel_hash_map_->serializeVoxelHashMap(ss.str());
+    } else {
+        // Add "last" to the file path
+        std::stringstream ss;
+        ss << p_save_path_ << "last.semantic";
+        voxel_hash_map_->serializeVoxelHashMap(ss.str());
+    }
 
     return true;
 }
@@ -596,14 +604,19 @@ bool VoxelHashMapNode::openMapSrvCallback(
     std::string file_path = req.file_path;
     ROS_INFO("Loading map from %s", file_path.c_str());
     voxel_hash_map_->deserializeVoxelHashMap(file_path);
-    std::cout << voxel_hash_map_ << std::endl;
+    ROS_INFO("Map loaded with %ld voxels", voxel_hash_map_->size());
+    ROS_INFO("Resolution: %f", voxel_hash_map_->getVoxelSize());                                                                                                            
+    did_voxel_map_update_ = true;
     return true;
 }
 
 bool VoxelHashMapNode::evaluateMapSrvCallback(std_srvs::Empty::Request &req,
                                               std_srvs::Empty::Response &res) {
     ROS_INFO("Evaluating map");
-    voxel_hash_map_->evaluateVoxelMap();
+    // Instantiate a map evaluator
+    std::unique_ptr<semantic_mapping::MapEvaluator> map_evaluator =
+        std::make_unique<semantic_mapping::MapEvaluator>(p_resolution_, p_n_classes_);
+    map_evaluator->evaluateMap();
     return true;
 }
 

@@ -6,6 +6,14 @@ set(CMAKE_CXX_STANDARD 17)
 # Add -o3 to compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
+# Set the build type to Debug if not already set
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# Add debug flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+
 ## Find system libraries
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
@@ -20,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_runtime
   cv_bridge
   tf_conversions
+  core_tools
   semantic_mapping
 )
 

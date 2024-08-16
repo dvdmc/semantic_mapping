@@ -12,5 +12,6 @@
   <author email="davidmc@unizar.es">David Morilla-Cabello</author>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>core_tools</depend>
 
 </package>

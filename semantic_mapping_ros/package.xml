@@ -21,6 +21,7 @@
   <depend>message_runtime</depend>
   <depend>cv_bridge</depend>
   <depend>tf_conversions</depend>
+  <depend>core_tools</depend>
   <depend>semantic_mapping</depend>
 
 </package>

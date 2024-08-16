@@ -55,7 +55,7 @@ class VoxelInfo {
     Eigen::MatrixXf
         uncertainties;  // Class uncertainty might be a covariance or other
                         // kind. It is left as a matrix to allow covariances.
-                        // CURRENTLY: covariance diagonal
+                        // CURRENTLY: covariance diagonal                   
     int samples_count;  // This value is only incremented in MC and maintained
                         // in other fusions
     Eigen::ArrayXi
@@ -95,6 +95,7 @@ class VoxelInfo {
         gt_class_count = _gt_class_count;
     }
     void addGtObservation(const int &gt_class) {
+        assert(gt_class < gt_class_count.size()); // ERROR: Class id out of bound
         gt_class_count(gt_class, 0) += 1;
     }
 
@@ -106,9 +107,11 @@ class VoxelInfo {
     int getSamplesCount() const { return samples_count; }
 
     float getClassProbability(const int &class_id) const {
+        assert(class_id < probabilities.size()); // ERROR: Class id out of bound
         return probabilities(class_id, 0);
     }
     float getClassUncertainty(const int &class_id) const {
+        assert(class_id < probabilities.size()); // ERROR: Class id out of bound
         return uncertainties(class_id, 0);
     }
     float getTraceUncertainties() const { return uncertainties.sum(); }
@@ -175,7 +178,7 @@ class VoxelInfo {
         os << "Samples count: " << voxel.samples_count << std::endl;
         return os;
     }
-
+    
     // Serialization
     template <class Archive>
     void serialize(Archive &archive) {
