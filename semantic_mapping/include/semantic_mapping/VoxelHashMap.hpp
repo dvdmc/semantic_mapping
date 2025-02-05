@@ -100,6 +100,29 @@ class VoxelHashMap {
         }
     }
 
+    void getMapBbox(Eigen::Vector3f &min, Eigen::Vector3f &max) const {
+        // Get the map Bbox or limits by iterating over all voxels
+        min = Eigen::Vector3f(std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max());
+        max = Eigen::Vector3f(std::numeric_limits<float>::min(),std::numeric_limits<float>::min(),std::numeric_limits<float>::min());
+        for (auto it = voxel_hash_map_.begin(); it != voxel_hash_map_.end();
+             it++) {
+            Eigen::Vector3f point = keyToPoint(it->first);
+            min = min.cwiseMin(point);
+            max = max.cwiseMax(point);
+        }
+        min -= Eigen::Vector3f(resolution_,resolution_,resolution_);
+        max += Eigen::Vector3f(resolution_,resolution_,resolution_);
+    }
+
+    Eigen::Vector3i getMapSize() const {
+        // Get the map size in number of voxels
+        Eigen::Vector3f min, max;
+        getMapBbox(min, max);
+        Eigen::Vector3i min_int = voxelizePosition(min);
+        Eigen::Vector3i max_int = voxelizePosition(max);
+        return max_int - min_int;
+    }
+
     // Get voxel from map
     VoxelInfo getVoxel(const uint64_t &key) const {
         auto it = voxel_hash_map_.find(key);
@@ -274,6 +297,56 @@ class VoxelHashMap {
             cereal::BinaryOutputArchive archive(file);
             // TODO (KNOWN ISSUE): We are just serializing the map. Missing resolution and n_classes!
             serialize(archive);
+        }
+        file.close();
+        return true;
+    }
+
+    bool savePGMMap(std::string filename) {
+        std::ofstream file(filename, std::ios::out);
+        if (!file.is_open()) {
+            std::cout << "Could not open file " << filename << std::endl;
+            return false;
+        }
+        {
+            float th_z = 1.0;
+            // We have to project the map on the x-y plane. We will create a matrix for that with
+            // the map bbox in x, y and z.
+            Eigen::Vector3f min, max;
+            getMapBbox(min, max);
+            Eigen::Vector3i map_size = getMapSize();
+            // To round correctly, we have to rest half of the resolution to the max
+            max = max - Eigen::Vector3f(resolution_ / 2.0, resolution_ / 2.0, resolution_ / 2.0);
+            // Input in the PGM the size
+            file << "P2\n" << "# Created by VoxelHashMap\n" << map_size[0] << " " << map_size[1] << "\n" << 255 << std::endl;
+            // Iterate on x-y plane
+            std::cout << "Saving PGM map" << std::endl;
+            std::cout << "Detected limits: X [" << min[0] << "," << max[0] << "] Y [" << min[1] << "," << max[1] << "] Z [" << min[2] << "," << max[2] << "]" << std::endl;
+            std::cout << "Resolution: " << resolution_ << std::endl;
+            for (float y = min[1]; y < max[1]; y += resolution_) {
+                for (float x = min[0]; x < max[0]; x += resolution_) {            
+                    // Check if there the Z coordinate.
+                    // If voxels Z coordinate are over obstacle threshold then the value should be 0.
+                    // Otherwise the value should be 255.
+                    // If there is no voxel then the value should be 0.
+                    // If the class of the voxel is other than 0, then the value is 125
+                    int value = 0;
+                    for (float z = min[2]; z < th_z; z += resolution_) {
+                        if (hasVoxel(Eigen::Vector3f(x, y, z))) {
+                            int voxel_class = getVoxelPtr(
+                                Eigen::Vector3f(x, y, z))->getMostProbableClass();
+                            if (voxel_class != 0) {
+                                value = 125;
+                            } else
+                            {
+                                value = 255;
+                            }
+                        }
+                    }
+                    file << value << " ";
+                }
+                file << std::endl;
+            }
         }
         file.close();
         return true;

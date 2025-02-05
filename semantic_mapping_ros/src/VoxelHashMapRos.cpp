@@ -199,6 +199,8 @@ void VoxelHashMapNode::rosInit() {
     // the path and instead requests the saveVoxelMap() function to be called.
     srv_save_map_ = nh_.advertiseService(
         "save_map", &VoxelHashMapNode::saveMapSrvCallback, this);
+    srv_save_pgm_ = nh_.advertiseService(
+        "save_pgm", &VoxelHashMapNode::savePGMMapSrvCallback, this);
     srv_open_map_ = nh_.advertiseService(
         "open_map", &VoxelHashMapNode::openMapSrvCallback, this);
     srv_evaluate_map_ = nh_.advertiseService(
@@ -595,6 +597,15 @@ bool VoxelHashMapNode::saveMapSrvCallback(
     std::string file_path = req.file_path;
     ROS_INFO("Saving map to %s", file_path.c_str());
     voxel_hash_map_->serializeVoxelHashMap(file_path);
+    return true;
+}
+
+bool VoxelHashMapNode::savePGMMapSrvCallback(
+    semantic_mapping_ros::FilePath::Request &req,
+    semantic_mapping_ros::FilePath::Response &res) {
+    std::string file_path = req.file_path;
+    ROS_INFO("Saving map to %s", file_path.c_str());
+    voxel_hash_map_->savePGMMap(file_path);
     return true;
 }
 

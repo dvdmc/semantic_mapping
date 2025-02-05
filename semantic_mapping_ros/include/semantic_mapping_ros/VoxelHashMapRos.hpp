@@ -71,6 +71,7 @@ class VoxelHashMapNode {
 
     // Services
     ros::ServiceServer srv_save_map_;
+    ros::ServiceServer srv_save_pgm_;
     ros::ServiceServer srv_save_map_request_;
     ros::ServiceServer srv_open_map_;
     ros::ServiceServer srv_evaluate_map_;
@@ -138,6 +139,10 @@ class VoxelHashMapNode {
     bool saveMapRequestSrvCallback(
         std_srvs::Empty::Request &req,
         std_srvs::Empty::Response &res);
+    bool savePGMMapSrvCallback(
+        semantic_mapping_ros::FilePath::Request &req,
+        semantic_mapping_ros::FilePath::Response &res);
+        
     bool saveMapSrvCallback(semantic_mapping_ros::FilePath::Request &req,
                             semantic_mapping_ros::FilePath::Response &res);
     bool openMapSrvCallback(semantic_mapping_ros::FilePath::Request &req,
