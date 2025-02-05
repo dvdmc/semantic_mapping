@@ -1,0 +1,19 @@
+depth_threshold: 8.0
+resolution: 0.1
+n_classes: 3
+
+map_frame: "map"
+
+save_experiment: false
+save_each_n_updates: 10
+experiment_save_path: "/home/semantic_mapping/experiments/"
+
+visualize_semantics: true
+visualize_semantics_frequency: 10
+visualization_top_height: 2.0
+
+method:
+  dl_method: "DET"
+  fusion_method: "BAY"
+  uncertainty_method: "UNCERTAINTY"
+  beta: 0.3

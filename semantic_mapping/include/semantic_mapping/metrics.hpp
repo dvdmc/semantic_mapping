@@ -28,8 +28,11 @@ struct SemanticMapMetrics
 {
     int num_classes;
     float resolution;
-    std::vector<std::vector<int>> confusion_matrix;
     float entropy;
+    std::vector<std::vector<float>> confusion_matrix;
+    std::vector<std::vector<float>> confidences;
+    std::vector<int> pred_labels;
+    std::vector<int> true_labels;
 
     virtual ~SemanticMapMetrics() = default;
 };
@@ -37,15 +40,21 @@ struct SemanticMapMetrics
 void to_json(json& j, const SemanticMapMetrics& p){
     j = json{{"num_classes", p.num_classes},
              {"resolution", p.resolution},
+             {"pred_labels", p.pred_labels},
+             {"entropy", p.entropy},
              {"confusion_matrix", p.confusion_matrix},
-             {"entropy", p.entropy}};
+             {"confidences", p.confidences},
+             {"true_labels", p.true_labels}};
 }
 
 void from_json(const json& j, SemanticMapMetrics& p){
     j.at("num_classes").get_to(p.num_classes);
     j.at("resolution").get_to(p.resolution);
-    j.at("confusion_matrix").get_to(p.confusion_matrix);
+    j.at("pred_labels").get_to(p.pred_labels);
     j.at("entropy").get_to(p.entropy);
+    j.at("confusion_matrix").get_to(p.confusion_matrix);
+    j.at("confidences").get_to(p.confidences);
+    j.at("true_labels").get_to(p.true_labels);
 }
 
 /**
@@ -55,13 +64,16 @@ struct SemanticVolumetricMapMetrics : public SemanticMapMetrics
 {
     int num_classes;
     float resolution;
-    std::vector<std::vector<int>> confusion_matrix;
     float entropy;
     int frontiers;
     int occupied;
     int free;
     int invalid;
     float coverage;
+    std::vector<std::vector<float>> confusion_matrix;
+    std::vector<std::vector<float>> confidences;
+    std::vector<int> pred_labels;
+    std::vector<int> true_labels;
 
     virtual ~SemanticVolumetricMapMetrics() = default;
 };
@@ -69,25 +81,31 @@ struct SemanticVolumetricMapMetrics : public SemanticMapMetrics
 void to_json(json& j, const SemanticVolumetricMapMetrics& p){
     j = json{{"num_classes", p.num_classes},
              {"resolution", p.resolution},
-             {"confusion_matrix", p.confusion_matrix},
              {"entropy", p.entropy},
              {"frontiers", p.frontiers},
              {"occupied", p.occupied},
              {"free", p.free},
              {"invalid", p.invalid},
-             {"coverage", p.coverage}};
+             {"coverage", p.coverage},
+             {"confusion_matrix", p.confusion_matrix},
+             {"confidences", p.confidences},
+             {"pred_labels", p.pred_labels},
+             {"true_labels", p.true_labels}};
 }
 
 void from_json(const json& j, SemanticVolumetricMapMetrics& p){
     j.at("num_classes").get_to(p.num_classes);
     j.at("resolution").get_to(p.resolution);
-    j.at("confusion_matrix").get_to(p.confusion_matrix);
     j.at("entropy").get_to(p.entropy);
     j.at("frontiers").get_to(p.frontiers);
     j.at("occupied").get_to(p.occupied);
     j.at("free").get_to(p.free);
     j.at("invalid").get_to(p.invalid);
     j.at("coverage").get_to(p.coverage);
+    j.at("confusion_matrix").get_to(p.confusion_matrix);
+    j.at("confidences").get_to(p.confidences);
+    j.at("pred_labels").get_to(p.pred_labels);
+    j.at("true_labels").get_to(p.true_labels);
 }
 
 }  // namespace semantic_mapping
